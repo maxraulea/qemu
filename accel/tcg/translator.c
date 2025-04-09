@@ -7,6 +7,7 @@
  * See the COPYING file in the top-level directory.
  */
 
+#include "hw/core/cpu.h"
 #include "qemu/osdep.h"
 #include "qemu/log.h"
 #include "qemu/error-report.h"
@@ -173,6 +174,7 @@ void translator_loop(CPUState *cpu, TranslationBlock *tb, int *max_insns,
          * done next -- either exiting this loop or locate the start of
          * the next instruction.
          */
+
         ops->translate_insn(db, cpu);
 
         /*
@@ -192,6 +194,13 @@ void translator_loop(CPUState *cpu, TranslationBlock *tb, int *max_insns,
         if (db->is_jmp != DISAS_NEXT) {
             break;
         }
+        ////db->pc_next == 1049620 ||
+      //  if( db->insn_start->opc == 3888){
+
+      //   }
+        int opcode = translator_ldub(cpu_env(cpu), db, pc);
+        printf("Let's tryyy %d  \n",  opcode);
+
 
         /* Stop translation if the output buffer is full,
            or we have executed all of the allowed instructions.  */
@@ -237,6 +246,7 @@ void translator_loop(CPUState *cpu, TranslationBlock *tb, int *max_insns,
             if (!ops->disas_log ||
                 !ops->disas_log(db, cpu, logfile)) {
                 fprintf(logfile, "IN: %s\n", lookup_symbol(db->pc_first));
+                // fprintf(logfile, "HELLOOKLSOKLAOSLAOKSAOKSOASKO\n");
                 target_disas(logfile, cpu, db);
             }
             fprintf(logfile, "\n");

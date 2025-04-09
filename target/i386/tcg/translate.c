@@ -83,6 +83,7 @@ static TCGv_i64 cpu_bndu[4];
 
 typedef struct DisasContext {
     DisasContextBase base;
+    // add the instruction buffer here
 
     target_ulong pc;       /* pc = eip + cs_base */
     target_ulong cs_base;  /* base of CS segment */

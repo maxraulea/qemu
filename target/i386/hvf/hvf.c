@@ -70,6 +70,7 @@
 
 #include <Hypervisor/hv.h>
 #include <Hypervisor/hv_vmx.h>
+#include <stdio.h>
 #include <sys/sysctl.h>
 
 #include "hw/i386/apic_internal.h"

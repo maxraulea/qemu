@@ -95,6 +95,8 @@ void helper_write_crN(CPUX86State *env, int reg, target_ulong t0)
         if (!(env->efer & MSR_EFER_LMA)) {
             t0 &= 0xffffffffUL;
         }
+        printf("misc_helper.c\n");
+        // try to find something useful in the env struct
         cpu_x86_update_cr3(env, t0);
         break;
     case 4:
@@ -132,6 +134,7 @@ void helper_wrmsr(CPUX86State *env)
 {
     uint64_t val;
     CPUState *cs = env_cpu(env);
+    printf("write to the msr register\n");
 
     cpu_svm_check_intercept_param(env, SVM_EXIT_MSR, 1, GETPC());
 

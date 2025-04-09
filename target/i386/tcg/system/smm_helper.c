@@ -256,6 +256,7 @@ void helper_rsm(CPUX86State *env)
     }
 #else
     cpu_x86_update_cr0(env, x86_ldl_phys(cs, sm_state + 0x7ffc));
+    printf("smm_helper.c\n");
     cpu_x86_update_cr3(env, x86_ldl_phys(cs, sm_state + 0x7ff8));
     cpu_load_eflags(env, x86_ldl_phys(cs, sm_state + 0x7ff4),
                     ~(CC_O | CC_S | CC_Z | CC_A | CC_P | CC_C | DF_MASK));

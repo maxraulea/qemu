@@ -4638,6 +4638,7 @@ static void gen_WAIT(DisasContext *s, X86DecodedInsn *decode)
 #ifndef CONFIG_USER_ONLY
 static void gen_WRMSR(DisasContext *s, X86DecodedInsn *decode)
 {
+    printf("we got hereee??\n");
     gen_update_cc_op(s);
     gen_update_eip_cur(s);
     gen_helper_wrmsr(tcg_env);

@@ -23,6 +23,7 @@
 #include "exec/cputlb.h"
 #include "exec/translation-block.h"
 #include "system/runstate.h"
+#include <stdio.h>
 #ifndef CONFIG_USER_ONLY
 #include "system/hw_accel.h"
 #include "monitor/monitor.h"
@@ -173,6 +174,8 @@ void cpu_x86_update_cr0(CPUX86State *env, uint32_t new_cr0)
 void cpu_x86_update_cr3(CPUX86State *env, target_ulong new_cr3)
 {
     env->cr[3] = new_cr3;
+    //env->cr[3] = 89;
+    printf("we updated the cr3!!, %u\n", new_cr3);
     if (env->cr[0] & CR0_PG_MASK) {
         qemu_log_mask(CPU_LOG_MMU,
                         "CR3 update: CR3=" TARGET_FMT_lx "\n", new_cr3);

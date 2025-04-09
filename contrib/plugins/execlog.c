@@ -64,9 +64,9 @@ static void vcpu_mem(unsigned int cpu_index, qemu_plugin_meminfo_t info,
 
     /* Indicate type of memory access */
     if (qemu_plugin_mem_is_store(info)) {
-        g_string_append(s, ", store");
+       //g_string_append(s, ", store");
     } else {
-        g_string_append(s, ", load");
+       // g_string_append(s, ", load");
     }
 
     /* If full system emulation log physical address and device name */
@@ -74,9 +74,9 @@ static void vcpu_mem(unsigned int cpu_index, qemu_plugin_meminfo_t info,
     if (hwaddr) {
         uint64_t addr = qemu_plugin_hwaddr_phys_addr(hwaddr);
         const char *name = qemu_plugin_hwaddr_device_name(hwaddr);
-        g_string_append_printf(s, ", 0x%08"PRIx64", %s", addr, name);
+        //g_string_append_printf(s, ", 0x%08"PRIx64", %s", addr, name);
     } else {
-        g_string_append_printf(s, ", 0x%08"PRIx64, vaddr);
+        //g_string_append_printf(s, ", 0x%08"PRIx64, vaddr);
     }
 }
 
@@ -260,6 +260,8 @@ static void vcpu_tb_trans(qemu_plugin_id_t id, struct qemu_plugin_tb *tb)
         } else {
             uint32_t insn_opcode = 0;
             qemu_plugin_insn_data(insn, &insn_opcode, sizeof(insn_opcode));
+
+            //printf("DOES THIS WORK???\n\n");
 
             char *output = g_strdup_printf("0x%"PRIx64", 0x%"PRIx32", \"%s\"",
                                            insn_vaddr, insn_opcode, insn_disas);
