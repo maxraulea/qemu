@@ -6,6 +6,7 @@
  * License: GNU GPL, version 2 or later.
  *   See the COPYING file in the top-level directory.
  */
+#include <_string.h>
 #include <glib.h>
 #include <inttypes.h>
 #include <stdio.h>
@@ -50,7 +51,7 @@ static CPU *get_cpu(int vcpu_index)
 
     return c;
 }
-
+ int logging = 0;
 /**
  * Add memory read or write information to current instruction log
  */
@@ -60,7 +61,9 @@ static void vcpu_mem(unsigned int cpu_index, qemu_plugin_meminfo_t info,
     CPU *c = get_cpu(cpu_index);
     GString *s = c->last_exec;
 
+
     /* Find vCPU in array */
+    //printf("MEMORYYY %llu\n", vaddr);
 
     /* Indicate type of memory access */
     if (qemu_plugin_mem_is_store(info)) {
@@ -78,6 +81,52 @@ static void vcpu_mem(unsigned int cpu_index, qemu_plugin_meminfo_t info,
     } else {
         //g_string_append_printf(s, ", 0x%08"PRIx64, vaddr);
     }
+}
+
+#define INSTRUCTION_COUNT 15
+
+
+struct instruction_buffer{
+   uint64_t instruction_count;
+   unsigned current_index;
+   char* instructions[INSTRUCTION_COUNT];
+};
+
+struct instruction_buffer ins_buf;
+
+static void add_to_instruction_buffer(char* disas){
+
+   if(ins_buf.current_index > INSTRUCTION_COUNT - 1){
+       ins_buf.current_index = 0;
+   }
+
+   ins_buf.instructions[ins_buf.current_index] = disas;
+   ins_buf.current_index++;
+   ins_buf.instruction_count++;
+
+}
+
+static void print_instructions(void){
+    // print the last added instruction first
+    unsigned int curr_index = 0;
+    if(ins_buf.instruction_count > INSTRUCTION_COUNT){
+        // we need to move some instructions back
+        // stel current index is 9, dan moet hij beginnen op 0
+        // stel hij is 8 dan begint die bij 9   22
+        curr_index = ins_buf.current_index;
+        if(curr_index > INSTRUCTION_COUNT - 1) curr_index = 0;
+    }
+
+    for(int i = 0; i < (ins_buf.instruction_count < INSTRUCTION_COUNT ? ins_buf.instruction_count : INSTRUCTION_COUNT); i++){
+
+        printf("%s\n", ins_buf.instructions[curr_index]);
+        ins_buf.instructions[curr_index] = NULL;
+        curr_index++;
+        if(curr_index > INSTRUCTION_COUNT - 1) curr_index = 0;
+
+    }
+    ins_buf.current_index = 0;
+    ins_buf.instruction_count = 0;
 }
 
 /**
@@ -154,18 +203,48 @@ static void vcpu_insn_exec_only_regs(unsigned int cpu_index, void *udata)
 /* Log last instruction without checking regs, setup next */
 static void vcpu_insn_exec(unsigned int cpu_index, void *udata)
 {
-    CPU *cpu = get_cpu(cpu_index);
+    if(!logging){
+        return;
+    }
+    //CPU *cpu = get_cpu(cpu_index);
 
     /* Print previous instruction in cache */
-    if (cpu->last_exec->len) {
-        qemu_plugin_outs(cpu->last_exec->str);
-        qemu_plugin_outs("\n");
-    }
+    //const char *disas = qemu_plugin_insn_disas(insn);
+    // if (cpu->last_exec->len) {
+    //     qemu_plugin_outs(cpu->last_exec->str);
+    //     qemu_plugin_outs("\n");
+    // }
+    add_to_instruction_buffer(udata);
+
 
     /* Store new instruction in cache */
     /* vcpu_mem will add memory access information to last_exec */
-    g_string_printf(cpu->last_exec, "%u, ", cpu_index);
-    g_string_append(cpu->last_exec, (char *)udata);
+    //g_string_printf(cpu->last_exec, "%u, ", cpu_index);
+    //g_string_append(cpu->last_exec, (char *)udata);
+}
+
+static void vcpu_insn_exec_wrmsr(unsigned int cpu_index, void *udata){
+    if(!logging){
+        return;
+    }
+    //CPU *cpu = get_cpu(cpu_index);
+
+    /* Print previous instruction in cache */
+    //const char *disas = qemu_plugin_insn_disas(insn);
+    // if (cpu->last_exec->len) {
+    //     qemu_plugin_outs(cpu->last_exec->str);
+    //     qemu_plugin_outs("\n");
+    // }
+
+    //add_to_instruction_buffer(cpu->last_exec->str);
+    add_to_instruction_buffer(udata);
+    print_instructions();
+
+
+    /* Store new instruction in cache */
+    /* vcpu_mem will add memory access information to last_exec */
+   // g_string_printf(cpu->last_exec, "%u, ", cpu_index);
+   // g_string_append(cpu->last_exec, (char *)udata);
 }
 
 /**
@@ -176,6 +255,10 @@ static void vcpu_insn_exec(unsigned int cpu_index, void *udata)
  */
 static void vcpu_tb_trans(qemu_plugin_id_t id, struct qemu_plugin_tb *tb)
 {
+
+    if(!logging){
+        return;
+    }
     struct qemu_plugin_insn *insn;
     bool skip = (imatches || amatches);
     bool check_regs_this = rmatches;
@@ -261,18 +344,31 @@ static void vcpu_tb_trans(qemu_plugin_id_t id, struct qemu_plugin_tb *tb)
             uint32_t insn_opcode = 0;
             qemu_plugin_insn_data(insn, &insn_opcode, sizeof(insn_opcode));
 
-            //printf("DOES THIS WORK???\n\n");
+             // if (insn_opcode ==  0xfeeb){
+             //      g_free(insn_disas);
+             //      break;
+             // }
 
-            char *output = g_strdup_printf("0x%"PRIx64", 0x%"PRIx32", \"%s\"",
-                                           insn_vaddr, insn_opcode, insn_disas);
+             char *output = g_strdup_printf("0x%"PRIx64", 0x%"PRIx32", \"%s\"",
+                                            insn_vaddr, insn_opcode, insn_disas);
+            //char *output = g_strdup_printf("\"%s\"",
+                                           // insn_disas);
+            //printf("%s\n", output);
 
             /* Register callback on memory read or write */
             qemu_plugin_register_vcpu_mem_cb(insn, vcpu_mem,
                                              QEMU_PLUGIN_CB_NO_REGS,
                                              QEMU_PLUGIN_MEM_RW, NULL);
 
+
             /* Register callback on instruction */
-            if (check_regs_this) {
+            if(insn_opcode == 0x300f){
+                qemu_plugin_register_vcpu_insn_exec_cb(
+                    insn, vcpu_insn_exec_wrmsr,
+                    QEMU_PLUGIN_CB_NO_REGS,
+                    output);
+            }
+            else if (check_regs_this) {
                 qemu_plugin_register_vcpu_insn_exec_cb(
                     insn, vcpu_insn_exec_with_regs,
                     QEMU_PLUGIN_CB_R_REGS,

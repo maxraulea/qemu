@@ -129,7 +129,7 @@ void qemu_plugin_register_vcpu_insn_exec_cb(struct qemu_plugin_insn *insn,
                                             enum qemu_plugin_cb_flags flags,
                                             void *udata)
 {
-    printf("Instruction just happened\n");
+
     if (!tb_is_mem_only()) {
         plugin_register_dyn_cb__udata(&insn->insn_cbs, cb, flags, udata);
     }

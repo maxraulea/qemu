@@ -7,7 +7,6 @@
  * See the COPYING file in the top-level directory.
  */
 
-#include "hw/core/cpu.h"
 #include "qemu/osdep.h"
 #include "qemu/log.h"
 #include "qemu/error-report.h"
@@ -21,6 +20,47 @@
 #include "internal-target.h"
 #include "disas/disas.h"
 #include "tb-internal.h"
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+
+DisasContextBase cache_disas;
+CPUState cpu_cache;
+
+#define CACHE_SIZE_LOGGING 5
+
+struct cpu_cache_buffer{
+    CPUState cpu_cache[CACHE_SIZE_LOGGING];
+    unsigned current_index;
+};
+
+struct disas_context_cache_buffer{
+    DisasContextBase cache_disas[CACHE_SIZE_LOGGING];
+    unsigned current_index;
+};
+
+struct cpu_cache_buffer cpu_buff = {};
+struct disas_context_cache_buffer context_buffer = {};
+
+static void init_buffers(void){
+    memset(&cpu_buff, 0, sizeof(cpu_buff));
+    memset(&context_buffer, 0, sizeof(context_buffer));
+    cpu_buff.current_index = 0;
+    context_buffer.current_index = 0;
+}
+
+static void add_to_buffer(DisasContextBase* db, CPUState *cpu){
+    if(cpu_buff.current_index > CACHE_SIZE_LOGGING - 1){
+        cpu_buff.current_index = 0;
+        context_buffer.current_index = 0;
+    }
+    cpu_buff.cpu_cache[cpu_buff.current_index] = *cpu;
+    context_buffer.cache_disas[context_buffer.current_index] = *db;
+
+    context_buffer.current_index++;
+    cpu_buff.current_index++;
+
+}
 
 static void set_can_do_io(DisasContextBase *db, bool val)
 {
@@ -129,6 +169,9 @@ void translator_loop(CPUState *cpu, TranslationBlock *tb, int *max_insns,
     TCGOp *icount_start_insn;
     TCGOp *first_insn_start = NULL;
     bool plugin_enabled;
+    int print_block = 0;
+
+    init_buffers();
 
     /* Initialize DisasContext */
     db->tb = tb;
@@ -192,14 +235,23 @@ void translator_loop(CPUState *cpu, TranslationBlock *tb, int *max_insns,
 
         /* Stop translation if translate_insn so indicated.  */
         if (db->is_jmp != DISAS_NEXT) {
+            //printf("NEXT block \n\n\n");
             break;
         }
         ////db->pc_next == 1049620 ||
       //  if( db->insn_start->opc == 3888){
 
       //   }
-        int opcode = translator_ldub(cpu_env(cpu), db, pc);
-        printf("Let's tryyy %d  \n",  opcode);
+        uint16_t opcode = translator_lduw(cpu_env(cpu), db, pc);
+        // if(opcode == 48824){
+        //     printf("Let's tryyy %d  \n",  opcode);
+        //     print_block = 1;
+        // }
+        if(opcode == 0x300F){
+
+            //printf("Let's tryyy %d  \n",  opcode);
+        }
+
 
 
         /* Stop translation if the output buffer is full,
@@ -240,19 +292,26 @@ void translator_loop(CPUState *cpu, TranslationBlock *tb, int *max_insns,
     if (qemu_loglevel_mask(CPU_LOG_TB_IN_ASM)
         && qemu_log_in_addr_range(db->pc_first)) {
         FILE *logfile = qemu_log_trylock();
-        if (logfile) {
+        if (logfile && print_block) {
             fprintf(logfile, "----------------\n");
 
             if (!ops->disas_log ||
                 !ops->disas_log(db, cpu, logfile)) {
                 fprintf(logfile, "IN: %s\n", lookup_symbol(db->pc_first));
-                // fprintf(logfile, "HELLOOKLSOKLAOSLAOKSAOKSOASKO\n");
-                target_disas(logfile, cpu, db);
+                //fprintf(logfile, "HELLOOKLSOKLAOSLAOKSAOKSOASKO\n");
+
+                // print them in the ride order, this should make it easier to read. So last one translated goes in first
+
+                //target_disas(logfile, cpu, db);
+                target_disas(logfile, &cpu_cache, &cache_disas);
+                print_block = 0;
             }
             fprintf(logfile, "\n");
             qemu_log_unlock(logfile);
         }
     }
+    cache_disas = *db;
+    cpu_cache = *cpu;
 }
 
 static bool translator_ld(CPUArchState *env, DisasContextBase *db,

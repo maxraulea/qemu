@@ -134,8 +134,10 @@ void helper_wrmsr(CPUX86State *env)
 {
     uint64_t val;
     CPUState *cs = env_cpu(env);
+    printf("--------------------------\n");
     printf("write to the msr register\n");
-
+    printf("the register values are first 4 bytes: %x, second 4 bytes: %x and the register index: %x \n\n", (uint32_t)env->regs[R_EDX], (uint32_t)env->regs[R_EAX], (uint32_t)env->regs[R_ECX]);
+    printf("--------------------------\n\n");
     cpu_svm_check_intercept_param(env, SVM_EXIT_MSR, 1, GETPC());
 
     val = ((uint32_t)env->regs[R_EAX]) |
